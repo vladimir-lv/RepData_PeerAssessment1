@@ -1,30 +1,29 @@
-# Reproducible Research: Peer Assessment 1
-
+---
+title: 'Reproducible Research: Peer Assessment 1'
+author: 'Vladimir Loiterstein'
+output:
+  html_document:
+    keep_md: yes
+---
 
 ## Loading and preprocessing the data
+Date column is converted to Date type
+
 
 ```r
+options("scipen"=100, "digits"=4)
+
 df_act<-read.csv("activity.csv",sep=',',header=TRUE)
 df_act$date<-as.Date(df_act$date)
-summary(df_act)
-```
-
-```
-##      steps             date               interval     
-##  Min.   :  0.00   Min.   :2012-10-01   Min.   :   0.0  
-##  1st Qu.:  0.00   1st Qu.:2012-10-16   1st Qu.: 588.8  
-##  Median :  0.00   Median :2012-10-31   Median :1177.5  
-##  Mean   : 37.38   Mean   :2012-10-31   Mean   :1177.5  
-##  3rd Qu.: 12.00   3rd Qu.:2012-11-15   3rd Qu.:1766.2  
-##  Max.   :806.00   Max.   :2012-11-30   Max.   :2355.0  
-##  NA's   :2304
 ```
 
 
 ## What is mean total number of steps taken per day?
+###  Total number of steps taken per day
 
 ```r
 df_act_sum<-aggregate(steps ~ date,data=df_act,sum)
+
 df_act_sum
 ```
 
@@ -85,27 +84,25 @@ df_act_sum
 ## 53 2012-11-29  7047
 ```
 
-```r
-mean(df_act_sum$steps)
-```
 
-```
-## [1] 10766.19
-```
+### Histogram of the total number of steps taken each day
 
 ```r
-median(df_act_sum$steps)
+df_hist<-hist(df_act_sum$steps, breaks = 20,main = "Total number of steps taken each day",xlab = "Number of 
+steps")
 ```
 
-```
-## [1] 10765
-```
+![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3-1.png) 
+
+### Mean and median of the total number of steps taken per day
 
 ```r
-df_hist<-hist(df_act_sum$steps, breaks = 10,main = "Total number of steps taken each day",xlab = "Number of steps")
+v_act_mean<-mean(df_act_sum$steps)
+v_act_median<-median(df_act_sum$steps)
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-2-1.png) 
+ - Mean is 10766.1887.
+ - Meadian is 10765.
 
 
 
@@ -113,24 +110,65 @@ df_hist<-hist(df_act_sum$steps, breaks = 10,main = "Total number of steps taken 
 
 ```r
 df_day_pattern<-aggregate(steps ~ interval,data=df_act,mean)
-
 plot(steps ~ interval,data=df_day_pattern,type="l")
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-3-1.png) 
+![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-5-1.png) 
+
+```r
+v_max_steps_interval<-df_day_pattern[which.max(df_day_pattern$steps),1]
+```
+5-minute interval 835 contains the maximum number of steps
 
 
 ## Imputing missing values
+Total number of missing values is 2304
 
-```r
-sum(is.na(df_act))
-```
-
-```
-## [1] 2304
-```
+Replacing NA values with average values for particular 5-min interval.
 
 ```r
 df_empty<-df_act[is.na((df_act$steps)),]
+df_filled<-merge(df_empty,df_day_pattern,"interval")
+colnames(df_filled)[4]<-"steps"
+df_act_new<-rbind(df_act[!is.na((df_act$steps)),],df_filled[,c(4,3,1)])
+df_act_new$steps<-round(df_act_new$steps)
+df_act_new<-df_act_new[order(df_act_new$date,df_act_new$interval),]
 ```
+
+df_act_new data set contains missing data filled in
+
+
+### Histogram of the total number of steps taken each day with filled in NA values.
+
+```r
+df_act_new_sum<-aggregate(steps ~ date,data=df_act_new,sum)
+df_hist<-hist(df_act_new_sum$steps, breaks = 20,main = "Total number of steps taken each day",xlab = "Number of steps")
+```
+
+![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-7-1.png) 
+
+
+### The mean and median total number of steps taken per day
+
+- Mean is 10765.6393
+- Median is 10762
+
+As we see values fro Meand and Median decreased afet filling in missed values.
+
 ## Are there differences in activity patterns between weekdays and weekends?
+
+
+```r
+library("lattice")
+df_act_new$weekday<-as.factor(
+        ifelse(weekdays(df_act_new$date) %in% c("Sunday","Saturday"),"weekend","weekday"))
+
+df_act_weekday_pattern<-aggregate(steps ~ weekday+interval,data=df_act_new,mean)
+  
+xyplot(steps ~interval|weekday,data=df_act_weekday_pattern,type='l',layout = c(1,2))
+```
+
+![plot of chunk unnamed-chunk-8](figure/unnamed-chunk-8-1.png) 
+
+
+

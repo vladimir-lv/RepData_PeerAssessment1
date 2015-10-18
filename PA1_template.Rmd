@@ -1,44 +1,101 @@
 ---
 title: 'Reproducible Research: Peer Assessment 1'
+author: 'Vladimir Loiterstein'
 output:
   html_document:
     keep_md: yes
 ---
 
-
 ## Loading and preprocessing the data
+Date column is converted to Date type
+
 ```{r}
+options("scipen"=100, "digits"=4)
+
 df_act<-read.csv("activity.csv",sep=',',header=TRUE)
 df_act$date<-as.Date(df_act$date)
-summary(df_act)
 ```
 
 
 ## What is mean total number of steps taken per day?
+###  Total number of steps taken per day
 ```{r}
 df_act_sum<-aggregate(steps ~ date,data=df_act,sum)
+
 df_act_sum
-mean(df_act_sum$steps)
-median(df_act_sum$steps)
-df_hist<-hist(df_act_sum$steps, breaks = 10,main = "Total number of steps taken each day",xlab = "Number of steps")
 ```
+
+
+### Histogram of the total number of steps taken each day
+```{R}
+df_hist<-hist(df_act_sum$steps, breaks = 20,main = "Total number of steps taken each day",xlab = "Number of 
+steps")
+```
+
+### Mean and median of the total number of steps taken per day
+```{r,results='hide'}
+v_act_mean<-mean(df_act_sum$steps)
+v_act_median<-median(df_act_sum$steps)
+```
+
+ - Mean is `r v_act_mean`.
+ - Meadian is `r v_act_median`.
 
 
 
 ## What is the average daily activity pattern?
-```{r}
-
+```{r,results='hide'}
 df_day_pattern<-aggregate(steps ~ interval,data=df_act,mean)
-
 plot(steps ~ interval,data=df_day_pattern,type="l")
+v_max_steps_interval<-df_day_pattern[which.max(df_day_pattern$steps),1]
+
 ```
+5-minute interval `r v_max_steps_interval` contains the maximum number of steps
 
 
 ## Imputing missing values
-```{r}
-sum(is.na(df_act))
+Total number of missing values is `r sum(is.na(df_act))`
 
+Replacing NA values with average values for particular 5-min interval.
+```{r}
 df_empty<-df_act[is.na((df_act$steps)),]
+df_filled<-merge(df_empty,df_day_pattern,"interval")
+colnames(df_filled)[4]<-"steps"
+df_act_new<-rbind(df_act[!is.na((df_act$steps)),],df_filled[,c(4,3,1)])
+df_act_new$steps<-round(df_act_new$steps)
+df_act_new<-df_act_new[order(df_act_new$date,df_act_new$interval),]
+```
+
+df_act_new data set contains missing data filled in
+
+
+### Histogram of the total number of steps taken each day with filled in NA values.
+```{r}
+df_act_new_sum<-aggregate(steps ~ date,data=df_act_new,sum)
+df_hist<-hist(df_act_new_sum$steps, breaks = 20,main = "Total number of steps taken each day",xlab = "Number of steps")
 
 ```
+
+
+### The mean and median total number of steps taken per day
+
+- Mean is `r mean(df_act_new_sum$steps)`
+- Median is `r median(df_act_new_sum$steps)`
+
+As we see values fro Meand and Median decreased afet filling in missed values.
+
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+library("lattice")
+df_act_new$weekday<-as.factor(
+        ifelse(weekdays(df_act_new$date) %in% c("Sunday","Saturday"),"weekend","weekday"))
+
+df_act_weekday_pattern<-aggregate(steps ~ weekday+interval,data=df_act_new,mean)
+  
+xyplot(steps ~interval|weekday,data=df_act_weekday_pattern,type='l',layout = c(1,2))
+
+```
+
+
+
